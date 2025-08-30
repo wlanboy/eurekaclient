@@ -1,0 +1,37 @@
+<application>
+    <name>SERVICEREGISTRY</name>
+    <instance>
+        <instanceId>gmk:serviceregistry:8761</instanceId>
+        <hostName>gmk</hostName>
+        <app>SERVICEREGISTRY</app>
+        <ipAddr>192.168.178.91</ipAddr>
+        <status>UP</status>
+        <overriddenstatus>UNKNOWN</overriddenstatus>
+        <port enabled="true">8761</port>
+        <securePort enabled="false">443</securePort>
+        <countryId>1</countryId>
+        <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
+            <name>MyOwn</name>
+        </dataCenterInfo>
+        <leaseInfo>
+            <renewalIntervalInSecs>30</renewalIntervalInSecs>
+            <durationInSecs>90</durationInSecs>
+            <registrationTimestamp>1749447391885</registrationTimestamp>
+            <lastRenewalTimestamp>1749447512238</lastRenewalTimestamp>
+            <evictionTimestamp>0</evictionTimestamp>
+            <serviceUpTimestamp>1749447362079</serviceUpTimestamp>
+        </leaseInfo>
+        <metadata>
+            <management.port>8761</management.port>
+        </metadata>
+        <homePageUrl>http://gmk:8761/</homePageUrl>
+        <statusPageUrl>http://gmk:8761/actuator/info</statusPageUrl>
+        <healthCheckUrl>http://gmk:8761/actuator/health</healthCheckUrl>
+        <vipAddress>serviceregistry</vipAddress>
+        <secureVipAddress>serviceregistry</secureVipAddress>
+        <isCoordinatingDiscoveryServer>true</isCoordinatingDiscoveryServer>
+        <lastUpdatedTimestamp>1749447391885</lastUpdatedTimestamp>
+        <lastDirtyTimestamp>1749447361856</lastDirtyTimestamp>
+        <actionType>ADDED</actionType>
+    </instance>
+</application>
