@@ -1,0 +1,20 @@
+[
+  {
+    "serviceName": "serviceone",
+    "healthEndpointPath": "/actuator/health",
+    "infoEndpointPath": "/actuator/info",
+    "httpPort": 8080,
+    "securePort": 8443,
+    "hostName": "gmk.local",
+    "dataCenterInfoName": "MyOwn"
+  },
+  {
+    "serviceName": "servicetwo",
+    "healthEndpointPath": "/actuator/health",
+    "infoEndpointPath": "/actuator/info",
+    "httpPort": 9080,
+    "securePort": 9443,
+    "hostName": "gmk.local",
+    "dataCenterInfoName": "MyOwn"
+  }
+]
