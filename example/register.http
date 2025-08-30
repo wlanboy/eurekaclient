@@ -1,0 +1,20 @@
+POST http://gmk:8761/eureka/apps/SERVICEONE HTTP/1.1
+content-type: application/xml
+
+<instance>
+    <instanceId>gmk.local:SERVICEONE:8080</instanceId>
+    <hostName>gmk.local</hostName>
+    <app>SERVICEONE</app>
+    <ipAddr>192.168.178.91</ipAddr>
+    <vipAddress>serviceone</vipAddress>
+    <secureVipAddress>serviceone</secureVipAddress>
+    <status>UP</status>
+    <port enabled="true">8080</port>
+    <securePort enabled="false">8443</securePort>
+    <homePageUrl>http://gmk.local:8080/</homePageUrl>
+    <statusPageUrl>http://gmk.local:8080/actuator/info</statusPageUrl>
+    <healthCheckUrl>http://gmk.local:8080/actuator/health</healthCheckUrl>
+    <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
+        <name>MyOwn</name>
+    </dataCenterInfo>
+</instance>
