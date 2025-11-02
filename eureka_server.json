@@ -1,0 +1,7 @@
+{
+  "servers": [
+    "http://gmk:8761/eureka",
+    "http://localhost:8761/eureka",
+    "http://nuc:8761/eureka"
+  ]
+}
