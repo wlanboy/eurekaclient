@@ -26,7 +26,7 @@ stop_events = {}
 
 import random
 
-EUREKA_SERVERS_FILE = "eureka_servers.json"
+EUREKA_SERVERS_FILE = "eureka_server.json"
 EUREKA_SERVER_URLS = []
 
 # Lade Liste von Eureka-Servern
