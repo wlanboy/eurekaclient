@@ -42,3 +42,8 @@ python client_wm.py
 or
 uv run client_wm.py
 ```
+
+## run web ui
+```
+.venv/bin/uvicorn webserver:app --reload
+```
