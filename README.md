@@ -47,3 +47,4 @@ uv run client_wm.py
 ```
 .venv/bin/uvicorn webserver:app --reload
 ```
+![Web UI](screenshots/serviceclients.png)
