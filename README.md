@@ -25,6 +25,9 @@ uv run main.py
 - eureka_client_lib.py request client for the eureka api
 - metrics_exporter.py prometheus client publishing metrics about the registras
 
+## run eureka server
+- see: https://github.com/wlanboy/ServiceRegistry
+
 ## run simple client
 ```
 export EUREKA_SERVER_URL="http://gmk:8761/eureka/apps/"
