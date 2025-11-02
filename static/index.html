@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eureka Client Manager</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Eureka Client Manager</h1>
+    <label class="theme-toggle">
+      <input type="checkbox" id="theme-switch" />
+      <span>🌙 Dark Mode</span>
+    </label>
+  </header>
+
+  <main>
+    <section class="client-list-section">
+      <h2>Aktive Clients</h2>
+      <ul id="client-list" class="client-list"></ul>
+    </section>
+
+    <section class="add-client-section">
+      <h2>Neuen Client hinzufügen</h2>
+      <form id="add-form" class="client-form">
+        <input name="serviceName" placeholder="Service Name" required />
+        <input name="healthEndpointPath" placeholder="/actuator/health" required />
+        <input name="infoEndpointPath" placeholder="/actuator/info" required />
+        <input name="httpPort" placeholder="HTTP Port" type="number" required />
+        <input name="securePort" placeholder="Secure Port" type="number" required />
+        <input name="hostName" placeholder="Host Name" required />
+        <input name="dataCenterInfoName" placeholder="Data Center Name" required />
+        <button type="submit">➕ Hinzufügen</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
