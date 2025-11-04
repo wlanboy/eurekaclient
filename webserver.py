@@ -1,13 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from models import ClientConfig
 import threading
 import os
 import json
 import random
 import logging
 import time
+import random
+import signal
 
 from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
 
@@ -24,16 +26,10 @@ if not os.path.exists(LOG_DIR):
 else:
     print(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
-@app.get("/")
-def serve_index():
-    return FileResponse("static/index.html")
-
 # In-memory registry
 clients = {}
 client_threads = {}
 stop_events = {}
-
-import random
 
 EUREKA_SERVERS_FILE = "eureka_server.json"
 EUREKA_SERVER_URLS = []
@@ -79,18 +75,21 @@ def save_clients_to_file():
     except Exception as e:
         print(f"Fehler beim Speichern von Clients: {e}")
 
-class ClientConfig(BaseModel):
-    serviceName: str
-    healthEndpointPath: str
-    infoEndpointPath: str
-    httpPort: int
-    securePort: int
-    hostName: str
-    dataCenterInfoName: str
-    leaseInfo: dict = {
-        "renewalIntervalInSecs": 30,
-        "durationInSecs": 90
-    }
+@app.on_event("shutdown")
+def shutdown_handler():
+    print("Server wird heruntergefahren. Stoppe alle Clients...")
+    for name, event in stop_events.items():
+        print(f"Stoppe Client {name}")
+        event.set()
+    for name, thread in client_threads.items():
+        if thread.is_alive():
+            print(f"⏳ Warte auf Thread von {name}")
+            thread.join(timeout=5)
+    print("✅ Alle Clients gestoppt.")
+
+@app.get("/")
+def serve_index():
+    return FileResponse("static/index.html")
 
 @app.get("/clients")
 def list_clients():
