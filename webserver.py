@@ -1,11 +1,13 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import threading
 import os
 import json
 import random
+import logging
+import time
 
 from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
 
@@ -14,6 +16,13 @@ metrics_store = MetricsStore()
 
 # Static files (HTML, JS, CSS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+    print(f"Logverzeichnis '{LOG_DIR}' wurde erstellt.")
+else:
+    print(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
 @app.get("/")
 def serve_index():
@@ -128,9 +137,17 @@ def start_client(name: str):
 
     def run():
         service_data = clients[name]
+        log_path = f"logs/{name}.log"
         success = False
         attempts = 0
         tried = set()
+
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.INFO)
+        handler = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.handlers = [handler] 
 
         while not success and len(tried) < len(EUREKA_SERVER_URLS):
             server = random.choice(EUREKA_SERVER_URLS)
@@ -139,10 +156,12 @@ def start_client(name: str):
             tried.add(server)
             service_data["eurekaServerUrl"] = server
             try:
-                eureka_lifecycle(service_data, metrics_store, stop_event)
+                logger.info(f"Versuche Verbindung zu {server}")
+                eureka_lifecycle(service_data, metrics_store, stop_event, logger)
                 success = True
             except Exception as e:
                 print(f"Verbindung zu {server} fehlgeschlagen für {name}: {e}")
+                logger.error(f"Fehlgeschlagen bei {server}: {e}")
                 continue
 
         if not success:
@@ -174,3 +193,21 @@ def stop_client(name: str):
         print(f"Fehler beim Deregistrieren von {name}: {e}")
 
     return {"message": f"Client {name} stopped and deregistered."}
+
+@app.get("/clients/{name}/logs")
+def stream_logs(name: str):
+    name = name.upper()
+    log_path = f"logs/{name}.log"
+    if not os.path.exists(log_path):
+        raise HTTPException(status_code=404, detail="Logfile nicht gefunden")
+
+    def log_streamer():
+        with open(log_path, "r") as f:
+            while True:
+                line = f.readline()
+                if line:
+                    yield line
+                else:
+                    time.sleep(1)
+
+    return StreamingResponse(log_streamer(), media_type="text/plain")
