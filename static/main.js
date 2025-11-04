@@ -3,17 +3,22 @@ async function loadClients() {
   const clients = await res.json();
   const list = document.getElementById('client-list');
   list.innerHTML = '';
-  clients.forEach(c => {
+
+  clients.forEach(client => {
     const li = document.createElement('li');
     li.innerHTML = `
-      <strong>${c.serviceName}</strong> - ${c.running ? '🟢 läuft' : '🔴 gestoppt'}
+      <strong>${client.serviceName}</strong> - ${client.running ? '🟢 läuft' : '🔴 gestoppt'}
       <div>
-        <button onclick="start('${c.serviceName}')">Start</button>
-        <button class="stop" onclick="stop('${c.serviceName}')">Stop</button>
-        <button onclick="del('${c.serviceName}')">Löschen</button>
+        <button onclick="start('${client.serviceName}')">Start</button>
+        <button class="stop" onclick="stop('${client.serviceName}')">Stop</button>
+        <button onclick="del('${client.serviceName}')">Löschen</button>
+        <button onclick="toggleLogs('${client.serviceName}')">Show Logs</button>
       </div>
     `;
     list.appendChild(li);
+
+    const logViewer = createLogViewer(client.serviceName);
+    list.appendChild(logViewer);
   });
 }
 
@@ -56,6 +61,53 @@ async function del(name) {
     alert(`❌ Netzwerkfehler beim Löschen von ${name}`);
   } finally {
     loadClients();
+  }
+}
+
+function createLogViewer(name) {
+  const logDiv = document.createElement('div');
+  logDiv.id = `log-${name}`;
+  logDiv.className = 'log-viewer';
+  logDiv.style.display = 'none'; 
+  logDiv.innerHTML = `<pre><code id="log-content-${name}">Logs werden geladen...</code></pre>`;
+  return logDiv;
+}
+
+
+async function showLogs(name) {
+  const logContainer = document.getElementById(`log-${name}`);
+  if (!logContainer) return;
+
+  const res = await fetch(`/clients/${name}/logs`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const logContent = document.getElementById(`log-content-${name}`);
+  logContent.textContent = "";
+
+  function read() {
+    reader.read().then(({ done, value }) => {
+      if (done) return;
+      logContent.textContent += decoder.decode(value);
+      logContent.scrollTop = logContent.scrollHeight;
+      read();
+    });
+  }
+
+  read();
+}
+
+function toggleLogs(name) {
+  const logDiv = document.getElementById(`log-${name}`);
+  if (!logDiv) {
+    alert(`⚠️ Log-Container für ${name} nicht gefunden.`);
+    return;
+  }
+
+  if (logDiv.style.display === 'block') {
+    logDiv.style.display = 'none';
+  } else {
+    logDiv.style.display = 'block';
+    showLogs(name);
   }
 }
 
