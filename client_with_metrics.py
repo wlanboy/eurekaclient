@@ -5,6 +5,7 @@ import time
 import sys
 import signal
 import os
+import logging
 
 # Importiere die Eureka-Client-Logik und die MetricsStore-Klasse
 from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
@@ -19,6 +20,14 @@ METRICS_SERVER_PORT = int(os.getenv("METRICS_SERVER_PORT", 9090))
 
 # --- Globale Metrik-Speicher-Instanz ---
 metrics_store = MetricsStore()
+
+# Logging
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+    print(f"Logverzeichnis '{LOG_DIR}' wurde erstellt.")
+else:
+    print(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
 # --- Globale Listen für Threads und Services (für sauberes Herunterfahren) ---
 eureka_lifecycle_threads = []
@@ -82,7 +91,15 @@ def main():
         stop_event = threading.Event()
         stop_events[service_name_upper] = stop_event
 
-        thread = threading.Thread(target=eureka_lifecycle, args=(service_data, metrics_store, stop_event))
+        log_path = f"logs/{service_name_upper}.log"
+        logger = logging.getLogger(service_name_upper)
+        logger.setLevel(logging.INFO)
+        handler = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.handlers = [handler] 
+
+        thread = threading.Thread(target=eureka_lifecycle, args=(service_data, metrics_store, stop_event, logger))
         eureka_lifecycle_threads.append(thread)
         thread.daemon = True
         thread.start()

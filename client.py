@@ -6,6 +6,7 @@ import sys
 import signal
 import logging
 import queue
+import os
 # Importiere die Eureka-Client-Logik und die MetricsStore-Klasse
 from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
 from eureka_client_lib import EUREKA_SERVER_URL # Um die URL im Start-Log auszugeben
@@ -18,6 +19,15 @@ completion_queue = queue.Queue() # Queue for thread completion signals
 # --- Globale Metrik-Speicher-Instanz ---
 # Jeder Client hat seine eigene Instanz von MetricsStore, um seine eigenen Metriken zu verfolgen.
 metrics_store = MetricsStore()
+
+# Logging
+# Logging
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+    print(f"Logverzeichnis '{LOG_DIR}' wurde erstellt.")
+else:
+    print(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
 # --- Globale Listen für Threads und Services (für sauberes Herunterfahren) ---
 eureka_lifecycle_threads = []
@@ -95,14 +105,22 @@ def main():
         stop_event = threading.Event()
         stop_events[service_name_upper] = stop_event
 
-        def run_lifecycle(service_data, metrics_store, stop_event):
+        log_path = f"logs/{service_name_upper}.log"
+        logger = logging.getLogger(service_name_upper)
+        logger.setLevel(logging.INFO)
+        handler = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.handlers = [handler] 
+
+        def run_lifecycle(service_data, metrics_store, stop_event, logger):
             try:
-                eureka_lifecycle(service_data, metrics_store, stop_event)
+                eureka_lifecycle(service_data, metrics_store, stop_event, logger)
             except Exception as e:
                 logging.exception(f"Error in eureka_lifecycle thread for {service_name_upper}: {e}") # Log the full exception
 
         # Starte den Lebenszyklus-Thread für jeden Service
-        thread = threading.Thread(target=run_lifecycle, args=(service_data, metrics_store, stop_event))
+        thread = threading.Thread(target=run_lifecycle, args=(service_data, metrics_store, stop_event, logger))
         eureka_lifecycle_threads.append(thread)
         thread.daemon = True # Wichtig: Ermöglicht das Beenden des Hauptprogramms, auch wenn diese Threads laufen
         thread.start()
