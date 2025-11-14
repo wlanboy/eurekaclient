@@ -20,6 +20,7 @@ public class ServiceInstance {
     private String ipAddr;
     private String dataCenterInfoName;
     private String status;
+    private boolean sslPreferred;
 
     // Getters and Setters
     public Long getId() {
@@ -84,5 +85,13 @@ public class ServiceInstance {
 
     public void setIpAddr(String ipAddr) {
         this.ipAddr = ipAddr;
+    }
+
+    public boolean isSslPreferred() {
+        return sslPreferred;
+    }
+
+    public void setSslPreferred(boolean sslPreferred) {
+        this.sslPreferred = sslPreferred;
     }
 }

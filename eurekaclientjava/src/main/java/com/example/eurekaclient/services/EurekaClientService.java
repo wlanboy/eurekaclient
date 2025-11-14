@@ -54,35 +54,46 @@ public class EurekaClientService {
     }
 
     private String buildXmlPayload(ServiceInstance instance) {
+        // Entscheide, ob SSL bevorzugt wird
+        boolean ssl = instance.isSslPreferred();
+
+        String portEnabled = ssl ? "false" : "true";
+        String secureEnabled = ssl ? "true" : "false";
+
+        // Wähle Protokoll und Port
+        String protocol = ssl ? "https" : "http";
+        int port = ssl ? instance.getSecurePort() : instance.getHttpPort();
+
         return """
-            <instance>
-            <instanceId>%s:%s:%d</instanceId>
-            <hostName>%s</hostName>
-            <app>%s</app>
-            <ipAddr>%s</ipAddr>
-            <vipAddress>%s</vipAddress>
-            <secureVipAddress>%s</secureVipAddress>
-            <status>%s</status>
-            <port enabled="false">%d</port>
-            <securePort enabled="true">%d</securePort>
-            <homePageUrl>http://%s:%d/</homePageUrl>
-            <statusPageUrl>http://%s:%d/actuator/info</statusPageUrl>
-            <healthCheckUrl>http://%s:%d/actuator/health</healthCheckUrl>
-            <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
-                <name>%s</name>
-            </dataCenterInfo>
-            </instance>
-            """.formatted(
-                instance.getHostName(), instance.getServiceName(), instance.getHttpPort(),
+                <instance>
+                  <instanceId>%s:%s:%d</instanceId>
+                  <hostName>%s</hostName>
+                  <app>%s</app>
+                  <ipAddr>%s</ipAddr>
+                  <vipAddress>%s</vipAddress>
+                  <secureVipAddress>%s</secureVipAddress>
+                  <status>%s</status>
+                  <port enabled="%s">%d</port>
+                  <securePort enabled="%s">%d</securePort>
+                  <homePageUrl>%s://%s:%d/</homePageUrl>
+                  <statusPageUrl>%s://%s:%d/actuator/info</statusPageUrl>
+                  <healthCheckUrl>%s://%s:%d/actuator/health</healthCheckUrl>
+                  <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
+                    <name>%s</name>
+                  </dataCenterInfo>
+                </instance>
+                """.formatted(
+                instance.getHostName(), instance.getServiceName(), port,
                 instance.getHostName(), instance.getServiceName(),
                 instance.getIpAddr(),
                 instance.getServiceName().toLowerCase(), instance.getServiceName().toLowerCase(),
                 instance.getStatus(),
-                instance.getHttpPort(), instance.getSecurePort(),
-                instance.getHostName(), instance.getHttpPort(),
-                instance.getHostName(), instance.getHttpPort(),
-                instance.getHostName(), instance.getHttpPort(),
-                instance.getDataCenterInfoName()
-            );
+                portEnabled, instance.getHttpPort(),
+                secureEnabled, instance.getSecurePort(),
+                protocol, instance.getHostName(), port,
+                protocol, instance.getHostName(), port,
+                protocol, instance.getHostName(), port,
+                instance.getDataCenterInfoName());
     }
+
 }

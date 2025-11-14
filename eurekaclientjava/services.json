@@ -6,7 +6,8 @@
     "securePort": 8443,
     "ipAddr": "127.0.0.1",
     "dataCenterInfoName": "MyOwn",
-    "status": "UP"
+    "status": "UP",
+    "sslPreferred": true
   },
   {
     "serviceName": "ANOTHER-SERVICE",
@@ -15,7 +16,8 @@
     "securePort": 443,
     "ipAddr": "127.0.0.1",
     "dataCenterInfoName": "MyOwn",
-    "status": "UP"
+    "status": "UP",
+    "sslPreferred": true
   },
   {
     "serviceName": "DUMMY-SERVICE",
@@ -24,6 +26,7 @@
     "securePort": 7443,
     "ipAddr": "127.0.0.1",
     "dataCenterInfoName": "MyOwn",
-    "status": "UP"
+    "status": "UP",
+    "sslPreferred": true
   }
 ]
