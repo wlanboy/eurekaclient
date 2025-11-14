@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Eureka Clients</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 2rem; }
+        h1 { margin-bottom: 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 0.6rem; text-align: left; }
+        th { background: #f5f5f5; }
+        tr:hover { background: #fafafa; }
+        .status-up { color: #0a7; font-weight: 600; }
+        .status-down { color: #d33; font-weight: 600; }
+        .actions a, .actions button { margin-right: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Eureka Clients</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Service name</th>
+                <th>Host</th>
+                <th>HTTP port</th>
+                <th>Secure port</th>
+                <th>Data center</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="c : ${clients}">
+                <td th:text="${c.id}">1</td>
+                <td th:text="${c.serviceName}">MY-SERVICE</td>
+                <td th:text="${c.hostName}">localhost</td>
+                <td th:text="${c.httpPort}">8080</td>
+                <td th:text="${c.securePort}">443</td>
+                <td th:text="${c.dataCenterInfoName}">MyOwn</td>
+                <td>
+                    <span th:classappend="${c.status} == 'UP' ? 'status-up' : 'status-down'"
+                          th:text="${c.status}">UP</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p th:if="${#lists.isEmpty(clients)}">Keine Clients vorhanden.</p>
+</body>
+</html>
