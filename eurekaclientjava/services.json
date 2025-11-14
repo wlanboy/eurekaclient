@@ -4,22 +4,25 @@
     "hostName": "localhost",
     "httpPort": 8080,
     "securePort": 8443,
+    "ipAddr": "127.0.0.1",
     "dataCenterInfoName": "MyOwn",
     "status": "UP"
   },
   {
     "serviceName": "ANOTHER-SERVICE",
-    "hostName": "127.0.0.1",
+    "hostName": "gmk",
     "httpPort": 9090,
     "securePort": 443,
+    "ipAddr": "127.0.0.1",
     "dataCenterInfoName": "MyOwn",
     "status": "UP"
   },
   {
     "serviceName": "DUMMY-SERVICE",
-    "hostName": "dummy.local",
+    "hostName": "gmk.lan",
     "httpPort": 7070,
     "securePort": 7443,
+    "ipAddr": "127.0.0.1",
     "dataCenterInfoName": "MyOwn",
     "status": "UP"
   }

@@ -36,6 +36,7 @@ public class StartupService {
                             existing.setSecurePort(instance.getSecurePort());
                             existing.setDataCenterInfoName(instance.getDataCenterInfoName());
                             existing.setStatus(instance.getStatus());
+                            existing.setIpAddr(instance.getIpAddr());
                             repository.save(existing);
                             System.out.println("Aktualisiert: " + existing.getServiceName());
                         } else {

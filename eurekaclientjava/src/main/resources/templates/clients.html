@@ -25,6 +25,7 @@
                 <th>ID</th>
                 <th>Service name</th>
                 <th>Host</th>
+                <th>IP-Adresse</th>
                 <th>HTTP port</th>
                 <th>Secure port</th>
                 <th>Data center</th>
@@ -36,6 +37,7 @@
                 <td th:text="${c.id}">1</td>
                 <td th:text="${c.serviceName}">MY-SERVICE</td>
                 <td th:text="${c.hostName}">localhost</td>
+                <td th:text="${c.ipAddr}">127.0.0.1</td>
                 <td th:text="${c.httpPort}">8080</td>
                 <td th:text="${c.securePort}">443</td>
                 <td th:text="${c.dataCenterInfoName}">MyOwn</td>

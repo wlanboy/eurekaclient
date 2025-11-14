@@ -17,6 +17,7 @@ public class ServiceInstance {
     private String hostName;
     private int httpPort;
     private int securePort;
+    private String ipAddr;
     private String dataCenterInfoName;
     private String status;
 
@@ -75,5 +76,13 @@ public class ServiceInstance {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+    
+    public String getIpAddr() {
+        return ipAddr;
+    }
+
+    public void setIpAddr(String ipAddr) {
+        this.ipAddr = ipAddr;
     }
 }

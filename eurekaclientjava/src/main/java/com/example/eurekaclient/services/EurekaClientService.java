@@ -55,31 +55,34 @@ public class EurekaClientService {
 
     private String buildXmlPayload(ServiceInstance instance) {
         return """
-                <instance>
-                  <instanceId>%s:%s:%d</instanceId>
-                  <hostName>%s</hostName>
-                  <app>%s</app>
-                  <ipAddr>127.0.0.1</ipAddr>
-                  <vipAddress>%s</vipAddress>
-                  <secureVipAddress>%s</secureVipAddress>
-                  <status>UP</status>
-                  <port enabled="true">%d</port>
-                  <securePort enabled="true">%d</securePort>
-                  <homePageUrl>http://%s:%d/</homePageUrl>
-                  <statusPageUrl>http://%s:%d/actuator/info</statusPageUrl>
-                  <healthCheckUrl>http://%s:%d/actuator/health</healthCheckUrl>
-                  <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
-                    <name>%s</name>
-                  </dataCenterInfo>
-                </instance>
-                """.formatted(
-                instance.getServiceName(), instance.getServiceName(), instance.getHttpPort(),
-                instance.getServiceName(), instance.getServiceName(),
+            <instance>
+            <instanceId>%s:%s:%d</instanceId>
+            <hostName>%s</hostName>
+            <app>%s</app>
+            <ipAddr>%s</ipAddr>
+            <vipAddress>%s</vipAddress>
+            <secureVipAddress>%s</secureVipAddress>
+            <status>%s</status>
+            <port enabled="false">%d</port>
+            <securePort enabled="true">%d</securePort>
+            <homePageUrl>http://%s:%d/</homePageUrl>
+            <statusPageUrl>http://%s:%d/actuator/info</statusPageUrl>
+            <healthCheckUrl>http://%s:%d/actuator/health</healthCheckUrl>
+            <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
+                <name>%s</name>
+            </dataCenterInfo>
+            </instance>
+            """.formatted(
+                instance.getHostName(), instance.getServiceName(), instance.getHttpPort(),
+                instance.getHostName(), instance.getServiceName(),
+                instance.getIpAddr(),
                 instance.getServiceName().toLowerCase(), instance.getServiceName().toLowerCase(),
-                instance.getHttpPort(), instance.getHttpPort(),
-                instance.getServiceName(), instance.getHttpPort(),
-                instance.getServiceName(), instance.getHttpPort(),
-                instance.getServiceName(), instance.getHttpPort(),
-                instance.getDataCenterInfoName());
+                instance.getStatus(),
+                instance.getHttpPort(), instance.getSecurePort(),
+                instance.getHostName(), instance.getHttpPort(),
+                instance.getHostName(), instance.getHttpPort(),
+                instance.getHostName(), instance.getHttpPort(),
+                instance.getDataCenterInfoName()
+            );
     }
 }
