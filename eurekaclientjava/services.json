@@ -1,0 +1,26 @@
+[
+  {
+    "serviceName": "MY-SERVICE",
+    "hostName": "localhost",
+    "httpPort": 8080,
+    "securePort": 8443,
+    "dataCenterInfoName": "MyOwn",
+    "status": "UP"
+  },
+  {
+    "serviceName": "ANOTHER-SERVICE",
+    "hostName": "127.0.0.1",
+    "httpPort": 9090,
+    "securePort": 443,
+    "dataCenterInfoName": "MyOwn",
+    "status": "UP"
+  },
+  {
+    "serviceName": "DUMMY-SERVICE",
+    "hostName": "dummy.local",
+    "httpPort": 7070,
+    "securePort": 7443,
+    "dataCenterInfoName": "MyOwn",
+    "status": "UP"
+  }
+]
