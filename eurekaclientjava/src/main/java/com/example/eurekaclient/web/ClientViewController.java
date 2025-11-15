@@ -6,19 +6,19 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import com.example.eurekaclient.services.LifecycleManager;
 import com.example.eurekaclient.services.ServiceInstance;
-import com.example.eurekaclient.services.ServiceInstanceRepository;
+import com.example.eurekaclient.services.ServiceInstanceStore;
 
 import java.util.List;
 
 @Controller
 public class ClientViewController {
 
-    private final ServiceInstanceRepository repository;
+    private final ServiceInstanceStore store;
     private final LifecycleManager lifecycleManager;
 
-    public ClientViewController(ServiceInstanceRepository repository,
+    public ClientViewController(ServiceInstanceStore store,
                                 LifecycleManager lifecycleManager) {
-        this.repository = repository;
+        this.store = store;
         this.lifecycleManager = lifecycleManager;
     }
 
@@ -31,7 +31,7 @@ public class ClientViewController {
     // Clients View "/clients"
     @GetMapping("/clients")
     public String listClients(Model model) {
-        List<ServiceInstance> dbClients = repository.findAll();
+        List<ServiceInstance> dbClients = store.getInstances();
         List<ServiceInstance> runningClients = lifecycleManager.getRunningInstances();
 
         model.addAttribute("dbClients", dbClients);

@@ -13,7 +13,7 @@ import java.util.List;
 public class StartupService {
 
     @Bean
-    public ApplicationRunner importAndStartServices(ServiceInstanceRepository repository,
+    public ApplicationRunner importAndStartServices(ServiceInstanceStore store,
                                                     LifecycleManager lifecycleManager) {
         return args -> {
             File file = new File("services.json");
@@ -26,7 +26,7 @@ public class StartupService {
                     );
 
                     for (ServiceInstance instance : instances) {
-                        ServiceInstance existing = repository.findByServiceNameAndHostNameAndHttpPort(
+                        ServiceInstance existing = store.findByServiceNameAndHostNameAndHttpPort(
                                 instance.getServiceName(),
                                 instance.getHostName(),
                                 instance.getHttpPort()
@@ -37,10 +37,10 @@ public class StartupService {
                             existing.setDataCenterInfoName(instance.getDataCenterInfoName());
                             existing.setStatus(instance.getStatus());
                             existing.setIpAddr(instance.getIpAddr());
-                            repository.save(existing);
+                            store.save(existing);
                             System.out.println("Aktualisiert: " + existing.getServiceName());
                         } else {
-                            repository.save(instance);
+                            store.save(instance);
                             System.out.println("Neu importiert: " + instance.getServiceName());
                         }
                     }
@@ -52,7 +52,7 @@ public class StartupService {
             }
 
             // Jetzt alle Instanzen aus der DB holen und Lifecycle starten
-            List<ServiceInstance> allInstances = repository.findAll();
+            List<ServiceInstance> allInstances = store.getInstances();
             for (ServiceInstance instance : allInstances) {
                 lifecycleManager.startLifecycle(instance);
                 System.out.println("Lifecycle gestartet für: " + instance.getServiceName());
