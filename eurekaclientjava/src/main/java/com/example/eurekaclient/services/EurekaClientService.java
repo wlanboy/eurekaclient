@@ -17,8 +17,20 @@ public class EurekaClientService {
     private final String eurekaServerUrl = System.getenv()
             .getOrDefault("EUREKA_SERVER_URL", "http://localhost:8761/eureka/apps/");
 
+    public String generateInstanceId(ServiceInstance instance) {
+        int port = instance.isSslPreferred() ? instance.getSecurePort() : instance.getHttpPort();
+        return String.format("%s:%s:%d", instance.getHostName(), instance.getServiceName(), port);
+    }
+
+    public String generateServiceName(ServiceInstance instance) {
+        if (instance.getServiceName() == null) {
+            return "UNKNOWN";
+        }
+        return instance.getServiceName().trim().toUpperCase();
+    }
+
     public boolean registerInstance(ServiceInstance instance) {
-        String serviceName = instance.getServiceName().toUpperCase();
+        String serviceName = generateServiceName(instance);
         String appUrl = eurekaServerUrl + serviceName;
 
         String xmlPayload = buildXmlPayload(instance);
@@ -38,16 +50,16 @@ public class EurekaClientService {
     }
 
     public void sendHeartbeat(ServiceInstance instance) {
-        String serviceName = instance.getServiceName().toUpperCase();
-        String instanceId = instance.getServiceName() + ":" + serviceName + ":" + instance.getHttpPort();
+        String serviceName = generateServiceName(instance);
+        String instanceId = generateInstanceId(instance);
         String heartbeatUrl = eurekaServerUrl + serviceName + "/" + instanceId;
 
         restTemplate.put(heartbeatUrl, null);
     }
 
     public void deregisterInstance(ServiceInstance instance) {
-        String serviceName = instance.getServiceName().toUpperCase();
-        String instanceId = instance.getServiceName() + ":" + serviceName + ":" + instance.getHttpPort();
+        String serviceName = generateServiceName(instance);
+        String instanceId = generateInstanceId(instance);
         String deregisterUrl = eurekaServerUrl + serviceName + "/" + instanceId;
 
         restTemplate.delete(deregisterUrl);
