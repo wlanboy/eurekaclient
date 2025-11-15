@@ -11,7 +11,7 @@ mvn package
 sdk install java 21.0.2-graalce
 export GRAALVM_HOME=~/.sdkman/candidates/java/21.0.2-graalce/
 
-mvn -Pnative native:compile -DskipTests -Dspring.aot.enabled=true -Dspring.native.buildArgs="--static"
+mvn -Pnative -DskipTests -Dspring.aot.enabled=true -Dspring.native.buildArgs="--static --libc=musl" native:compile
 
 docker build -t eurekaclient:native .
 docker run -p 8080:8080 eurekaclient:native
