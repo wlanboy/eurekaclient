@@ -18,7 +18,12 @@ public class EurekaClientsInfoContributor implements InfoContributor {
     @Override
     public void contribute(Info.Builder builder) {
         int running = lifecycleManager.getRunningInstances().size();
-        builder.withDetail("eurekaClients", running + " Instanzen laufen");
+        builder.withDetail("eurekaClients.runningCount", running);
+
+        lifecycleManager.getRunningInstances().forEach(inst ->
+            builder.withDetail("eurekaClients." + inst.getServiceName(),
+                    "Status=" + inst.getStatus() )
+        );
     }
 }
 
