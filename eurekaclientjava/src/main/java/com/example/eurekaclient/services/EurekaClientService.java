@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 
 @Service
 public class EurekaClientService {
@@ -49,20 +50,31 @@ public class EurekaClientService {
         }
     }
 
-    public void sendHeartbeat(ServiceInstance instance) {
-        String serviceName = generateServiceName(instance);
-        String instanceId = generateInstanceId(instance);
-        String heartbeatUrl = eurekaServerUrl + serviceName + "/" + instanceId;
-
-        restTemplate.put(heartbeatUrl, null);
-    }
-
     public void deregisterInstance(ServiceInstance instance) {
         String serviceName = generateServiceName(instance);
         String instanceId = generateInstanceId(instance);
         String deregisterUrl = eurekaServerUrl + serviceName + "/" + instanceId;
 
         restTemplate.delete(deregisterUrl);
+    }
+
+    public boolean sendHeartbeat(ServiceInstance instance) {
+        String serviceName = generateServiceName(instance);
+        String instanceId = generateInstanceId(instance);
+        String heartbeatUrl = eurekaServerUrl + serviceName + "/" + instanceId;
+
+        try {
+            restTemplate.put(heartbeatUrl, null);
+            System.out.printf("[Heartbeat] Erfolgreich für %s (%s)%n", serviceName, instanceId);
+            return true;
+        } catch (HttpClientErrorException.NotFound nf) {
+            // 404 → Eureka kennt die Instanz nicht mehr
+            throw nf;
+        } catch (Exception e) {
+            System.err.printf("[Heartbeat] Fehler für %s (%s): %s%n",
+                    serviceName, instanceId, e.getMessage());
+            return false;
+        }
     }
 
     private String buildXmlPayload(ServiceInstance instance) {
