@@ -3,6 +3,9 @@ Goal of this project is a simple and small client to provide a migration path fo
 The microservices that are your own responsibility should be freed from the burden of running a Eureka client that is no longer in use but is still needed for your customers. 
 In a Cloud Native world, the microservices are hidden behind one or more load balancers. Therefore, we need a client that handles the registration of the microservices and uses the load balancer addresses as the destination url.
 
+## new java version
+If you are looking for a spring boot application doing this stuff use /eurekaclientjava
+
 ## run
 ```
 uv sync
