@@ -18,6 +18,10 @@ docker run --rm -p 8080:8080 \
   eurekaclient:latest
 ```
 
+# Helm install
+```bash
+helm install eurekaclient ./eurekaclient-chart
+```
 
 # Java Native build
 ```bash
