@@ -9,7 +9,7 @@ If you are looking for a spring boot application doing this stuff use: https://g
 ## run
 ```
 uv sync
-uv run main.py
+uv run client.py
 ```
 
 ### from scratch
@@ -17,7 +17,7 @@ uv run main.py
 - uv sync
 - uv pip compile pyproject.toml -o requirements.txt
 - uv pip install -r requirements.txt
-- uv run main.pys
+- uv run client.py
 
 ## simple client
 - client.py running the registras

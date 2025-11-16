@@ -52,8 +52,23 @@ def register_instance(service_data: dict, metrics_store: MetricsStore, logger=No
 
     ip_address = get_ip_address(host_name)
     secure_port = service_data.get("securePort", 443)
-    secure_port_enabled = "true" if secure_port > 0 else "false"
     data_center_info_name = service_data.get("dataCenterInfoName", "MyOwn")
+
+    # Neues Feld sslPreferred aus services.json
+    ssl_preferred = service_data.get("sslPreferred", False)
+
+    if ssl_preferred:
+        DISABLE_SSL = "false"
+        secure_port_enabled = "true"
+        port_enabled = "false"
+        scheme = "https"
+        active_port = service_data.get("securePort")
+    else:
+        DISABLE_SSL = "true"
+        secure_port_enabled = "false"
+        port_enabled = "true"
+        scheme = "http"
+        active_port = service_data.get("httpPort")
 
     instance_element = ET.Element("instance")
     ET.SubElement(instance_element, "instanceId").text = instance_id
@@ -64,19 +79,16 @@ def register_instance(service_data: dict, metrics_store: MetricsStore, logger=No
     ET.SubElement(instance_element, "secureVipAddress").text = service_name.lower()
     ET.SubElement(instance_element, "status").text = "UP"
 
-    port_element = ET.SubElement(instance_element, "port", attrib={"enabled": "true"})
+    port_element = ET.SubElement(instance_element, "port", attrib={"enabled": port_enabled})
     port_element.text = str(http_port)
-
-    DISABLE_SSL = os.getenv("DISABLE_SSL", "false")
-    if DISABLE_SSL == "true":
-        secure_port_enabled = "false"
 
     secure_port_element = ET.SubElement(instance_element, "securePort", attrib={"enabled": secure_port_enabled})
     secure_port_element.text = str(secure_port)
 
-    ET.SubElement(instance_element, "homePageUrl").text = f"http://{host_name}:{http_port}/"
-    ET.SubElement(instance_element, "statusPageUrl").text = f"http://{host_name}:{http_port}{service_data['infoEndpointPath']}"
-    ET.SubElement(instance_element, "healthCheckUrl").text = f"http://{host_name}:{http_port}{service_data['healthEndpointPath']}"
+    # URLs abhängig von SSL
+    ET.SubElement(instance_element, "homePageUrl").text = f"{scheme}://{host_name}:{active_port}/"
+    ET.SubElement(instance_element, "statusPageUrl").text = f"{scheme}://{host_name}:{active_port}{service_data['infoEndpointPath']}"
+    ET.SubElement(instance_element, "healthCheckUrl").text = f"{scheme}://{host_name}:{active_port}{service_data['healthEndpointPath']}"
 
     data_center_info_element = ET.SubElement(instance_element, "dataCenterInfo",
                                              attrib={"class": "com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo"})
@@ -84,10 +96,10 @@ def register_instance(service_data: dict, metrics_store: MetricsStore, logger=No
 
     xml_payload = ET.tostring(instance_element, encoding='utf-8', xml_declaration=True).decode('utf-8')
 
-    print(f"[{service_name}] Versuche Registrierung bei Eureka unter {app_url} mit IP: {ip_address}, SecurePort: {secure_port}, DataCenter: {data_center_info_name}")
+    print(f"[{service_name}] Versuche Registrierung bei Eureka unter {app_url} mit IP: {ip_address}, active_port: {active_port}, DataCenter: {data_center_info_name}, SSL: {ssl_preferred}")
     print(f"[{service_name}] Sende Payload:\n{xml_payload}")
     if logger:
-        logger.info(f"Versuche Registrierung bei {app_url} mit IP: {ip_address}, SecurePort: {secure_port}, DataCenter: {data_center_info_name}")
+        logger.info(f"Versuche Registrierung bei {app_url} mit IP: {ip_address}, active_port: {active_port}, DataCenter: {data_center_info_name}, SSL: {ssl_preferred}")
         logger.debug(f"XML-Payload:\n{xml_payload}")
 
     headers = {
