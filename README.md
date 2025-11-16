@@ -55,6 +55,8 @@ uv run client_with_metrics.py
 
 ```bash
 docker build -t eurekaclient:latest .
+
+docker build -t eurekaclientweb:latest . -f DockerfileWeb
 ```
 
 ## Docker run local
@@ -65,7 +67,16 @@ docker run --rm \
   --network host \
   -e EUREKA_SERVER_URL="http://localhost:8761/eureka/apps/" \
   -v $(pwd)/services.json:/app/services.json \
+  -v $(pwd)/eureka_server.json:/app/eureka_server.json \s
   eurekaclient:latest
+
+docker run --rm \
+  --name eurekaclientweb \
+  --network host \
+  -e EUREKA_SERVER_URL="http://localhost:8761/eureka/apps/" \
+  -v $(pwd)/services.json:/app/services.json \
+  -v $(pwd)/eureka_server.json:/app/eureka_server.json \
+  eurekaclientweb:latest
 
 ```
 
