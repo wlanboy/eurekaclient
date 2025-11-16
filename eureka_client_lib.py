@@ -139,27 +139,68 @@ def register_instance(service_data: dict, metrics_store: MetricsStore, logger=No
         metrics_store.set_service_registered_status(service_name, 0)
         return False
 
-def send_heartbeat(service_data: dict, logger=None):
+def send_heartbeat(service_data: dict, metrics_store: MetricsStore, logger=None, max_retries=3):
+    """
+    Sendet einen Heartbeat an Eureka mit Retry-Mechanismus.
+    Bei 404 wird eine Neu-Registrierung durchgeführt.
+    """
     service_name = service_data["serviceName"].upper()
     host_name = service_data["hostName"]
     http_port = service_data["httpPort"]
     instance_id = f"{host_name}:{service_name}:{http_port}"
     heartbeat_url = f"{EUREKA_SERVER_URL}{service_name}/{instance_id}"
 
-    try:
-        response = requests.put(heartbeat_url)
-        if response.status_code == 200:
-            print(f"[{service_name}] Heartbeat erfolgreich gesendet.")
+    attempt = 0
+    while attempt < max_retries:
+        attempt += 1
+        try:
+            response = requests.put(heartbeat_url)
+            if response.status_code == 200:
+                print(f"[{service_name}] Heartbeat erfolgreich gesendet (Versuch {attempt}).")
+                if logger:
+                    logger.info(f"Heartbeat erfolgreich gesendet (Versuch {attempt}).")
+                return True
+            elif response.status_code == 404:
+                print(f"[{service_name}] Heartbeat fehlgeschlagen mit 404 – Instanz nicht gefunden. "
+                      f"Versuche Neu-Registrierung...")
+                if logger:
+                    logger.warning("Heartbeat 404 – Instanz nicht gefunden. Starte Neu-Registrierung.")
+                # Neu-Registrierung durchführen
+                if register_instance(service_data, metrics_store, logger=logger):
+                    print(f"[{service_name}] Neu-Registrierung erfolgreich. Sende Heartbeat erneut...")
+                    if logger:
+                        logger.info("Neu-Registrierung erfolgreich. Sende Heartbeat erneut.")
+                    # nach erfolgreicher Registrierung direkt neuen Versuch starten
+                    continue
+                else:
+                    print(f"[{service_name}] Neu-Registrierung fehlgeschlagen.")
+                    if logger:
+                        logger.error("Neu-Registrierung fehlgeschlagen.")
+                    return False
+            else:
+                print(f"[{service_name}] Fehler beim Heartbeat ({response.status_code}): {response.text}")
+                if logger:
+                    logger.warning(f"Fehler beim Heartbeat ({response.status_code}): {response.text}")
+        except requests.exceptions.ConnectionError as e:
+            print(f"[{service_name}] Verbindungsfehler beim Heartbeat: {e}")
             if logger:
-                logger.info("Heartbeat erfolgreich gesendet.")
-        else:
-            print(f"[{service_name}] Fehler beim Senden des Heartbeats ({response.status_code}): {response.text}")
+                logger.error(f"Verbindungsfehler beim Heartbeat: {e}")
+        except Exception as e:
+            print(f"[{service_name}] Unerwarteter Fehler beim Heartbeat: {e}")
             if logger:
-                logger.warning(f"Fehler beim Heartbeat ({response.status_code}): {response.text}")
-    except requests.exceptions.ConnectionError as e:
-        print(f"[{service_name}] Fehler bei der Verbindung zu Eureka für Heartbeat: {e}")
+                logger.exception(f"Unerwarteter Fehler beim Heartbeat: {e}")
+
+        # Backoff vor erneutem Versuch
+        wait_time = min(2 * attempt, 10)
+        print(f"[{service_name}] Warte {wait_time}s vor erneutem Heartbeat-Versuch...")
         if logger:
-            logger.error(f"Verbindungsfehler beim Heartbeat: {e}")
+            logger.info(f"Warte {wait_time}s vor erneutem Heartbeat-Versuch...")
+        time.sleep(wait_time)
+
+    print(f"[{service_name}] Alle Heartbeat-Versuche fehlgeschlagen.")
+    if logger:
+        logger.error("Alle Heartbeat-Versuche fehlgeschlagen.")
+    return False
 
 def deregister_instance(service_data: dict, metrics_store: MetricsStore, logger=None):
     service_name = service_data["serviceName"].upper()
@@ -201,7 +242,7 @@ def eureka_lifecycle(service_data: dict, metrics_store: MetricsStore, stop_event
         logger.info("Starte Lebenszyklus.")
 
     # --- Registrierung mit Retry ---
-    max_reg_retries = 5
+    max_reg_retries = 10
     reg_attempt = 0
     registered = False
 
@@ -233,12 +274,12 @@ def eureka_lifecycle(service_data: dict, metrics_store: MetricsStore, stop_event
     while not stop_event.is_set():
         hb_success = False
         hb_attempt = 0
-        max_hb_retries = 3
+        max_hb_retries = 30
 
         while hb_attempt < max_hb_retries and not hb_success and not stop_event.is_set():
             hb_attempt += 1
             try:
-                send_heartbeat(service_data, logger=logger)
+                send_heartbeat(service_data, metrics_store=metrics_store, logger=logger, max_retries=max_hb_retries)
                 hb_success = True
             except Exception as e:
                 print(f"[{service_name}] Heartbeat-Versuch {hb_attempt} fehlgeschlagen: {e}")

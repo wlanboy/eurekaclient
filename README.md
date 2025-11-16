@@ -44,9 +44,9 @@ uv run client.py
 export EUREKA_SERVER_URL="http://gmk:8761/eureka/apps/" \
 export METRICS_SERVER_HOST="192.168.1.100" \
 export METRICS_SERVER_PORT="8080" \
-python client_wm.py
+python client.py
 or
-uv run client_wm.py
+uv run client_with_metrics.py
 ```
 
 ## run web ui
