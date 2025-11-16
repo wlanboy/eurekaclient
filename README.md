@@ -4,7 +4,7 @@ The microservices that are your own responsibility should be freed from the burd
 In a Cloud Native world, the microservices are hidden behind one or more load balancers. Therefore, we need a client that handles the registration of the microservices and uses the load balancer addresses as the destination url.
 
 ## new java version
-If you are looking for a spring boot application doing this stuff use /eurekaclientjava
+If you are looking for a spring boot application doing this stuff use: https://github.com/wlanboy/eurekaclientjava
 
 ## run
 ```
