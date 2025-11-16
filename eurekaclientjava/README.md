@@ -18,6 +18,16 @@ docker run --rm -p 8080:8080 \
   eurekaclient:latest
 ```
 
+# Docker run with published image from dockerhub
+```bash
+docker run --rm -p 8080:8080 \
+  --network host \
+  -v $(pwd)/services.json:/app/services.json \
+  -v $(pwd)/application.properties:/app/application.properties \
+  --name eurekaclient \
+  wlanboy/eurekaclientjava:latest
+```
+
 # Helm install
 ```bash
 helm install eurekaclient ./eurekaclient-chart
