@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: wlanboy/eurekaclientjava:latest
+  repository: wlanboy/eurekaclientjava
   tag: latest
   pullPolicy: IfNotPresent
 

@@ -23,8 +23,8 @@ spec:
               mountPath: /app/application.properties
               subPath: application.properties
             - name: service-volume
-              mountPath: /app/service.json
-              subPath: service.json
+              mountPath: /app/services.json
+              subPath: services.json
           command: ["java"]
           args: ["-Djava.security.egd=file:/dev/./urandom", "-jar", "/app/eurekaclient.jar"]
       volumes:

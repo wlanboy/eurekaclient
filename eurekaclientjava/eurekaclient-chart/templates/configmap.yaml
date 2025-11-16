@@ -16,7 +16,7 @@ kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-service
 data:
-  service.json: |
+  services.json: |
     [
     {
         "serviceName": "MY-SERVICE",
