@@ -4,6 +4,7 @@ import threading
 import os
 import socket
 import logging
+import time
 import xml.etree.ElementTree as ET
 
 EUREKA_SERVER_URL = os.getenv("EUREKA_SERVER_URL", "http://localhost:8761/eureka/apps/")
@@ -199,21 +200,62 @@ def eureka_lifecycle(service_data: dict, metrics_store: MetricsStore, stop_event
     if logger:
         logger.info("Starte Lebenszyklus.")
 
-    # Registrierung versuchen
-    if register_instance(service_data, metrics_store, logger=logger):
-        print(f"[{service_name}] Registrierung erfolgreich. Starte Heartbeat-Schleife.")
-        if logger:
-            logger.info("Registrierung erfolgreich. Starte Heartbeat-Schleife.")
+    # --- Registrierung mit Retry ---
+    max_reg_retries = 5
+    reg_attempt = 0
+    registered = False
 
-        # Heartbeat-Schleife, solange kein Stopp-Signal empfangen wird
-        while not stop_event.is_set():
-            send_heartbeat(service_data, logger=logger)
-            if stop_event.wait(timeout=lease_renewal_interval):
-                print(f"[{service_name}] Stopp-Signal für Heartbeat-Schleife empfangen.")
-                if logger:
-                    logger.info("Stopp-Signal empfangen. Beende Heartbeat-Schleife.")
-                break
-    else:
-        print(f"[{service_name}] Registrierung fehlgeschlagen. Keine Heartbeat-Schleife gestartet.")
+    while reg_attempt < max_reg_retries and not registered and not stop_event.is_set():
+        reg_attempt += 1
+        print(f"[{service_name}] Registrierungsversuch {reg_attempt}/{max_reg_retries}")
         if logger:
-            logger.warning("Registrierung fehlgeschlagen. Keine Heartbeat-Schleife gestartet.")
+            logger.info(f"Registrierungsversuch {reg_attempt}/{max_reg_retries}")
+
+        registered = register_instance(service_data, metrics_store, logger=logger)
+        if not registered:
+            wait_time = min(5 * reg_attempt, 30)  # Exponential Backoff bis max. 30s
+            print(f"[{service_name}] Registrierung fehlgeschlagen, erneuter Versuch in {wait_time}s...")
+            if logger:
+                logger.warning(f"Registrierung fehlgeschlagen, erneuter Versuch in {wait_time}s...")
+            stop_event.wait(wait_time)
+
+    if not registered:
+        print(f"[{service_name}] Registrierung endgültig fehlgeschlagen. Beende Lifecycle.")
+        if logger:
+            logger.error("Registrierung endgültig fehlgeschlagen. Lifecycle beendet.")
+        return
+
+    print(f"[{service_name}] Registrierung erfolgreich. Starte Heartbeat-Schleife.")
+    if logger:
+        logger.info("Registrierung erfolgreich. Starte Heartbeat-Schleife.")
+
+    # --- Heartbeat-Schleife mit Retry ---
+    while not stop_event.is_set():
+        hb_success = False
+        hb_attempt = 0
+        max_hb_retries = 3
+
+        while hb_attempt < max_hb_retries and not hb_success and not stop_event.is_set():
+            hb_attempt += 1
+            try:
+                send_heartbeat(service_data, logger=logger)
+                hb_success = True
+            except Exception as e:
+                print(f"[{service_name}] Heartbeat-Versuch {hb_attempt} fehlgeschlagen: {e}")
+                if logger:
+                    logger.warning(f"Heartbeat-Versuch {hb_attempt} fehlgeschlagen: {e}")
+                stop_event.wait(2 * hb_attempt)  # kleiner Backoff
+
+        if not hb_success:
+            print(f"[{service_name}] Alle Heartbeat-Versuche fehlgeschlagen.")
+            if logger:
+                logger.error("Alle Heartbeat-Versuche fehlgeschlagen.")
+            # hier könnte man optional deregistrieren oder Lifecycle beenden
+            break
+
+        # Warte bis zum nächsten Heartbeat oder Stop-Signal
+        if stop_event.wait(timeout=lease_renewal_interval):
+            print(f"[{service_name}] Stopp-Signal für Heartbeat-Schleife empfangen.")
+            if logger:
+                logger.info("Stopp-Signal empfangen. Beende Heartbeat-Schleife.")
+            break
