@@ -4,6 +4,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import java.util.Map;
 import java.util.List;
 import java.util.concurrent.*;
@@ -16,6 +20,11 @@ public class LifecycleManager {
     private final EurekaClientService eurekaClientService;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
 
+    private final Counter registrationsCounter;
+    private final Counter registrationsFailedCounter;
+    private final Counter heartbeatsCounter;
+    private final Counter heartbeatsFailedCounter;
+
     private final Map<Long, ScheduledFuture<?>> runningTasks = new ConcurrentHashMap<>();
     private final Map<Long, AtomicBoolean> stopEvents = new ConcurrentHashMap<>();
     private final Map<Long, ServiceInstance> instanceMap = new ConcurrentHashMap<>();
@@ -27,8 +36,32 @@ public class LifecycleManager {
     @Value("${lifecycle.heartbeat.retry.max:50}")
     private int maxHeartbeatRetries;
 
-    public LifecycleManager(EurekaClientService eurekaClientService) {
+    public LifecycleManager(EurekaClientService eurekaClientService, MeterRegistry meterRegistry) {
         this.eurekaClientService = eurekaClientService;
+
+        // Counter für Registrierungen
+        this.registrationsCounter = Counter.builder("eureka_registrations_total")
+                .description("Gesamtzahl erfolgreicher Registrierungen bei Eureka")
+                .register(meterRegistry);
+
+        this.registrationsFailedCounter = Counter.builder("eureka_registrations_failed_total")
+                .description("Gesamtzahl fehlgeschlagener Registrierungen bei Eureka")
+                .register(meterRegistry);
+
+        // Counter für Heartbeats
+        this.heartbeatsCounter = Counter.builder("eureka_heartbeats_total")
+                .description("Gesamtzahl erfolgreicher Heartbeats an Eureka")
+                .register(meterRegistry);
+
+        this.heartbeatsFailedCounter = Counter.builder("eureka_heartbeats_failed_total")
+                .description("Gesamtzahl fehlgeschlagener Heartbeats an Eureka")
+                .register(meterRegistry);
+
+        // Gauge für aktuell laufende Clients
+        Gauge.builder("eureka_clients_running", this, lm -> lm.getRunningInstances().size())
+            .description("Anzahl aktuell laufender Eureka Clients")
+            .register(meterRegistry);
+
     }
 
     public void startLifecycle(ServiceInstance instance) {
@@ -40,8 +73,7 @@ public class LifecycleManager {
 
         if (registered) {
             System.out.println("[Lifecycle] Registrierung erfolgreich für " + instance.getServiceName());
-
-            AtomicBoolean stopEvent = new AtomicBoolean(false);
+            registrationsCounter.increment();            AtomicBoolean stopEvent = new AtomicBoolean(false);
             stopEvents.put(instance.getId(), stopEvent);
 
             ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
@@ -69,6 +101,8 @@ public class LifecycleManager {
             instanceMap.put(instance.getId(), instance);
 
         } else {
+            registrationsFailedCounter.increment();
+
             if (attempt >= maxRegisterRetries) {
                 System.err.printf("[Lifecycle] Registrierung endgültig fehlgeschlagen für %s nach %d Versuchen%n",
                         instance.getServiceName(), attempt);
@@ -87,6 +121,7 @@ public class LifecycleManager {
         if (attempt > maxHeartbeatRetries) {
             System.err.printf("[Lifecycle] Heartbeat endgültig fehlgeschlagen für %s nach %d Versuchen%n",
                     instance.getServiceName(), attempt - 1);
+            heartbeatsFailedCounter.increment();
             return;
         }
 
@@ -97,10 +132,12 @@ public class LifecycleManager {
             if (!ok) {
                 System.out.printf("[Lifecycle] Heartbeat Retry %d fehlgeschlagen für %s – neuer Versuch in %d Sekunden%n",
                         attempt, instance.getServiceName(), delay);
+                heartbeatsFailedCounter.increment();
                 retryHeartbeat(instance, attempt + 1);
             } else {
                 System.out.printf("[Lifecycle] Heartbeat erfolgreich nach Retry %d für %s%n",
                         attempt, instance.getServiceName());
+                heartbeatsCounter.increment();
             }
         }, delay, TimeUnit.SECONDS);
     }
