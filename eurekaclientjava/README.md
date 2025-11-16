@@ -30,7 +30,11 @@ docker run --rm -p 8080:8080 \
 
 # Helm install
 ```bash
-helm install eurekaclient ./eurekaclient-chart
+kubectl create namespace eurekaclient
+helm install eurekaclient ./eurekaclient-chart --namespace eurekaclient
+
+kubectl logs -l app=eurekaclient -n eurekaclient
+
 ```
 
 # Java Native build
