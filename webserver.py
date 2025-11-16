@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 from models import ClientConfig
 import threading
 import os
@@ -9,11 +10,28 @@ import random
 import logging
 import time
 import random
-import signal
 
 from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup-Logik (falls nötig)
+    print("🚀 Server startet...")
+
+    yield  # hier läuft die App
+
+    # Shutdown-Logik
+    print("🔻 Server wird heruntergefahren. Stoppe alle Clients...")
+    for name, event in stop_events.items():
+        print(f"Stoppe Client {name}")
+        event.set()
+    for name, thread in client_threads.items():
+        if thread.is_alive():
+            print(f"⏳ Warte auf Thread von {name}")
+            thread.join(timeout=5)
+    print("✅ Alle Clients gestoppt.")
+
+app = FastAPI(lifespan=lifespan)
 metrics_store = MetricsStore()
 
 # Static files (HTML, JS, CSS)
@@ -74,18 +92,6 @@ def save_clients_to_file():
             json.dump(list(clients.values()), f, indent=2)
     except Exception as e:
         print(f"Fehler beim Speichern von Clients: {e}")
-
-@app.on_event("shutdown")
-def shutdown_handler():
-    print("Server wird heruntergefahren. Stoppe alle Clients...")
-    for name, event in stop_events.items():
-        print(f"Stoppe Client {name}")
-        event.set()
-    for name, thread in client_threads.items():
-        if thread.is_alive():
-            print(f"⏳ Warte auf Thread von {name}")
-            thread.join(timeout=5)
-    print("✅ Alle Clients gestoppt.")
 
 @app.get("/")
 def serve_index():
