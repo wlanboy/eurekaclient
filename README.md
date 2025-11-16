@@ -32,7 +32,8 @@ uv run client.py
 - see: https://github.com/wlanboy/ServiceRegistry
 
 ## run simple client
-```
+
+```bash
 export EUREKA_SERVER_URL="http://gmk:8761/eureka/apps/"
 python3 client.py
 or
@@ -40,7 +41,8 @@ uv run client.py
 ```
 
 ## run client with metrics
-```
+
+```bash
 export EUREKA_SERVER_URL="http://gmk:8761/eureka/apps/" \
 export METRICS_SERVER_HOST="192.168.1.100" \
 export METRICS_SERVER_PORT="8080" \
@@ -49,8 +51,38 @@ or
 uv run client_with_metrics.py
 ```
 
-## run web ui
+## Docker build
+
+```bash
+docker build -t eurekaclient:latest .
 ```
+
+## Docker run local
+
+```bash
+docker run --rm \
+  --name eurekaclient \
+  --network host \
+  -e EUREKA_SERVER_URL="http://localhost:8761/eureka/apps/" \
+  -v $(pwd)/services.json:/app/services.json \
+  eurekaclient:latest
+
+```
+
+## Docker run form docker hub
+
+```bash
+docker run --rm \
+  --name eurekaclient \
+  --network host \
+  -e EUREKA_SERVER_URL="http://localhost:8761/eureka/apps/" \
+  -v $(pwd)/services.json:/app/services.json \
+  wlanboy/eurekaclient:latest
+
+```
+
+## run web ui
+```bash
 .venv/bin/uvicorn webserver:app --reload
 ```
 ![Web UI](screenshots/serviceclients.png)
