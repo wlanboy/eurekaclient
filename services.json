@@ -6,7 +6,8 @@
     "httpPort": 8080,
     "securePort": 8443,
     "hostName": "gmk.local",
-    "dataCenterInfoName": "MyOwn"
+    "dataCenterInfoName": "MyOwn",
+    "sslPreferred": true
   },
   {
     "serviceName": "servicetwo",
@@ -15,6 +16,7 @@
     "httpPort": 9080,
     "securePort": 9443,
     "hostName": "gmk.local",
-    "dataCenterInfoName": "MyOwn"
+    "dataCenterInfoName": "MyOwn",
+    "sslPreferred": false
   }
 ]
