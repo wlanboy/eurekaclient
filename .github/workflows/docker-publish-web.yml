@@ -1,9 +1,6 @@
 
 name: Docker build and publish image for webserver
 on: 
-  push:
-    tags: 
-      - '*d'
   workflow_dispatch:
 jobs:
   build:
