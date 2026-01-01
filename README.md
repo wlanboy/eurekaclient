@@ -80,18 +80,6 @@ docker run --rm \
 
 ```
 
-## Docker run form docker hub
-
-```bash
-docker run --rm \
-  --name eurekaclient \
-  --network host \
-  -e EUREKA_SERVER_URL="http://localhost:8761/eureka/apps/" \
-  -v $(pwd)/services.json:/app/services.json \
-  wlanboy/eurekaclient:latest
-
-```
-
 ## run web ui
 ```bash
 .venv/bin/uvicorn webserver:app --reload
