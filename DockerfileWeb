@@ -1,16 +1,58 @@
-FROM python:3.12-slim
+# Multi-stage build für optimierte Image-Größe
+FROM python:3.12-slim AS builder
+
+# Setze Umgebungsvariablen für Python
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Installiere Build-Dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY webserver.py .
-COPY eureka_client_lib.py .
-COPY models.py .
-COPY static/ ./static/
+# Kopiere und installiere Python-Dependencies
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Final stage - minimales Runtime-Image
+FROM python:3.12-slim
+
+# Setze Umgebungsvariablen
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Erstelle non-root User für Security
+RUN groupadd -r appuser && \
+    useradd -r -g appuser -u 1000 -m -s /sbin/nologin appuser
+
+# Kopiere installierten Packages vom Builder in den User-Bereich
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+
+# Setze PATH für appuser's lokale Packages
+ENV PATH=/home/appuser/.local/bin:$PATH
+
+# Kopiere Anwendungscode
+COPY --chown=appuser:appuser webserver.py .
+COPY --chown=appuser:appuser eureka_client_lib.py .
+COPY --chown=appuser:appuser models.py .
+COPY --chown=appuser:appuser static/ ./static/
+
+# Erstelle logs Verzeichnis mit korrekten Berechtigungen
+RUN mkdir -p logs && chown -R appuser:appuser /app
+
+# Wechsel zu non-root User
+USER appuser
 
 EXPOSE 5000
 
-CMD ["uvicorn", "webserver:app", "--host", "0.0.0.0", "--port", "5000"]
+# Health check (optional - passt Port und Pfad an wenn nötig)
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#     CMD python -c "import requests; requests.get('http://localhost:5000/')"
 
+CMD ["uvicorn", "webserver:app", "--host", "0.0.0.0", "--port", "5000"]

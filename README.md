@@ -1,18 +1,22 @@
 # Eureka service registering all services in services.json
+
 Goal of this project is a simple and small client to provide a migration path for everyone stuck with Spring Eureka.
-The microservices that are your own responsibility should be freed from the burden of running a Eureka client that is no longer in use but is still needed for your customers. 
+The microservices that are your own responsibility should be freed from the burden of running a Eureka client that is no longer in use but is still needed for your customers.
 In a Cloud Native world, the microservices are hidden behind one or more load balancers. Therefore, we need a client that handles the registration of the microservices and uses the load balancer addresses as the destination url.
 
 ## new java version
+
 If you are looking for a spring boot application doing this stuff use: https://github.com/wlanboy/eurekaclientjava
 
 ## run
-```
+
+```bash
 uv sync
 uv run client.py
 ```
 
 ### from scratch
+
 - cd mirrorapi
 - uv sync
 - uv pip compile pyproject.toml -o requirements.txt
@@ -20,15 +24,18 @@ uv run client.py
 - uv run client.py
 
 ## simple client
+
 - client.py running the registras
 - eureka_client_lib.py request client for the eureka api
 
 ## client with metriks
+
 - client_with_metrics.py running the registras and webserver for metrics endpoints
 - eureka_client_lib.py request client for the eureka api
 - metrics_exporter.py prometheus client publishing metrics about the registras
 
 ## run eureka server
+
 - see: https://github.com/wlanboy/ServiceRegistry
 
 ## run simple client
@@ -65,9 +72,9 @@ docker build -t eurekaclientweb:latest . -f DockerfileWeb
 docker run --rm \
   --name eurekaclient \
   --network host \
-  -e EUREKA_SERVER_URL="http://localhost:8761/eureka/apps/" \
+  -e EUREKA_SERVER_URL="http://gmk.lan:8761/eureka/apps/" \
   -v $(pwd)/services.json:/app/services.json \
-  -v $(pwd)/eureka_server.json:/app/eureka_server.json \s
+  -v $(pwd)/eureka_server.json:/app/eureka_server.json \
   eurekaclient:latest
 
 docker run --rm \

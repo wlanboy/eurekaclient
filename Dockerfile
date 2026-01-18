@@ -1,12 +1,54 @@
-FROM python:3.12-slim
+# Multi-stage build für optimierte Image-Größe
+FROM python:3.12-slim AS builder
+
+# Setze Umgebungsvariablen für Python
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
+# Installiere Build-Dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+# Kopiere und installiere Python-Dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-COPY client.py .
-COPY eureka_client_lib.py .
+# Final stage - minimales Runtime-Image
+FROM python:3.12-slim
 
-CMD ["python", "client.py"]
+# Setze Umgebungsvariablen
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
+WORKDIR /app
+
+# Erstelle non-root User für Security
+RUN groupadd -r appuser && \
+    useradd -r -g appuser -u 1000 -m -s /sbin/nologin appuser
+
+# Kopiere installierten Packages vom Builder in den User-Bereich
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+
+# Setze PATH für appuser's lokale Packages
+ENV PATH=/home/appuser/.local/bin:$PATH
+
+# Kopiere Anwendungscode
+COPY --chown=appuser:appuser client.py .
+COPY --chown=appuser:appuser eureka_client_lib.py .
+
+# Erstelle logs Verzeichnis mit korrekten Berechtigungen
+RUN mkdir -p logs && chown -R appuser:appuser /app
+
+# Wechsel zu non-root User
+USER appuser
+
+# Health check (optional - passt Port und Pfad an wenn nötig)
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#     CMD python -c "import sys; sys.exit(0)"
+
+CMD ["python", "-u", "client.py"]
