@@ -5,22 +5,19 @@ import time
 import sys
 import signal
 import logging
-import queue
 import os
+from typing import List, Dict, Any
+
 # Importiere die Eureka-Client-Logik und die MetricsStore-Klasse
-from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
+from eureka_client_lib import eureka_lifecycle, MetricsStore
 from eureka_client_lib import EUREKA_SERVER_URL # Um die URL im Start-Log auszugeben
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-stop_events = {}  # Dictionary to store threading.Event objects
-completion_queue = queue.Queue() # Queue for thread completion signals
 
 # --- Globale Metrik-Speicher-Instanz ---
 # Jeder Client hat seine eigene Instanz von MetricsStore, um seine eigenen Metriken zu verfolgen.
 metrics_store = MetricsStore()
 
-# Logging
 # Logging
 LOG_DIR = "logs"
 if not os.path.exists(LOG_DIR):
@@ -30,9 +27,9 @@ else:
     print(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
 # --- Globale Listen für Threads und Services (für sauberes Herunterfahren) ---
-eureka_lifecycle_threads = []
-services_to_manage = [] # Muss global sein, damit der Signal-Handler darauf zugreifen kann
-stop_events = {} # Speichert Threading.Event-Objekte für jeden Service-Thread
+eureka_lifecycle_threads: List[threading.Thread] = []
+services_to_manage: List[Dict[str, Any]] = [] # Muss global sein, damit der Signal-Handler darauf zugreifen kann
+stop_events: Dict[str, threading.Event] = {} # Speichert Threading.Event-Objekte für jeden Service-Thread
 
 def graceful_shutdown(signum, frame):
     """
@@ -45,26 +42,15 @@ def graceful_shutdown(signum, frame):
         print(f"Sende Stopp-Signal an Service '{service_name}'.")
         event.set()
 
-    # 2. Wait for threads to complete (using the queue)
-    print("Waiting for services to deregister...")
-    for _ in range(len(services_to_manage)):  # Wait for each service thread
-        try:
-            completion_queue.get(timeout=10) # Timeout after 10 seconds
-        except queue.Empty:
-            print("Timeout waiting for a service to deregister.")
-            break
+    # 2. Warte auf alle Threads, dass sie sich beenden
+    print("Warte auf Beendigung aller Service-Threads...")
+    for thread in eureka_lifecycle_threads:
+        thread.join(timeout=10)
+        if thread.is_alive():
+            print(f"Warnung: Thread konnte nicht innerhalb von 10 Sekunden beendet werden.")
 
-    # 3. Services von Eureka deregistrieren
-    # Hier verwenden wir die globale metrics_store Instanz dieses Clients
-    for service_data in services_to_manage:
-        try:
-            deregister_instance(service_data, metrics_store)
-            print(f"Successfully deregistered {service_data['serviceName']} from Eureka.")
-        except Exception as e:
-            print(f"Error deregistering {service_data['serviceName']} from Eureka: {e}") 
-
-    print("Alle Services versucht zu deregistrieren. Beende Anwendung.")
-    sys.exit(0) # Beendet das Programm
+    print("Alle Services wurden heruntergefahren. Beende Anwendung.")
+    sys.exit(0)
 
 # --- Hauptlogik ---
 def main():
@@ -90,6 +76,11 @@ def main():
 
     # Starte Eureka Client Threads für jeden Service
     for service_data in services_to_manage:
+        # Validiere erforderliche Felder
+        if "serviceName" not in service_data:
+            print(f"Fehler: Service-Konfiguration fehlt 'serviceName'. Überspringe: {service_data}")
+            continue
+
         service_name_upper = service_data["serviceName"].upper()
         # Füge leaseInfo hinzu, falls nicht vorhanden
         if "leaseInfo" not in service_data:
@@ -97,7 +88,7 @@ def main():
                 "renewalIntervalInSecs": 30,
                 "durationInSecs": 90
             }
-        
+
         # Initialisiere den Metrik-Status für diesen Service in diesem Client
         metrics_store.set_service_registered_status(service_name_upper, 0) # Startet als nicht registriert
 
@@ -108,29 +99,41 @@ def main():
         log_path = f"logs/{service_name_upper}.log"
         logger = logging.getLogger(service_name_upper)
         logger.setLevel(logging.INFO)
-        handler = logging.FileHandler(log_path)
-        formatter = logging.Formatter('%(asctime)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.handlers = [handler] 
+        logger.propagate = False  # Verhindert Weitergabe an Root-Logger
 
-        def run_lifecycle(service_data, metrics_store, stop_event, logger):
+        # Nur Handler hinzufügen, wenn noch keiner vorhanden ist
+        if not logger.handlers:
+            handler = logging.FileHandler(log_path)
+            formatter = logging.Formatter('%(asctime)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
+        def run_lifecycle(svc_data, metrics, stop_evt, log, svc_name):
             try:
-                eureka_lifecycle(service_data, metrics_store, stop_event, logger)
+                eureka_lifecycle(svc_data, metrics, stop_evt, log)
             except Exception as e:
-                logging.exception(f"Error in eureka_lifecycle thread for {service_name_upper}: {e}") # Log the full exception
+                log.exception(f"Error in eureka_lifecycle thread for {svc_name}: {e}")
 
         # Starte den Lebenszyklus-Thread für jeden Service
-        thread = threading.Thread(target=run_lifecycle, args=(service_data, metrics_store, stop_event, logger))
+        thread = threading.Thread(
+            target=run_lifecycle,
+            args=(service_data, metrics_store, stop_event, logger, service_name_upper),
+            name=f"eureka-{service_name_upper}"
+        )
         eureka_lifecycle_threads.append(thread)
-        thread.daemon = True # Wichtig: Ermöglicht das Beenden des Hauptprogramms, auch wenn diese Threads laufen
+        thread.daemon = False  # Nicht-Daemon, damit graceful shutdown funktioniert
         thread.start()
 
     print("Eureka Client gestartet. Drücke STRG+C zum Beenden.")
 
-    # Halte den Hauptthread am Leben, damit die Daemon-Threads weiterlaufen
+    # Halte den Hauptthread am Leben, damit die Threads weiterlaufen
     # und der Signal-Handler auf STRG+C warten kann.
-    while True:
-        time.sleep(1)
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        # Falls KeyboardInterrupt nicht vom Signal-Handler abgefangen wird
+        graceful_shutdown(None, None)
 
 if __name__ == "__main__":
     main()

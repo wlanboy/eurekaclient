@@ -6,30 +6,33 @@ from models import ClientConfig
 import threading
 import os
 import json
-import random
 import logging
 import time
-import random
+from typing import Dict, List, Any
 
-from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
+from eureka_client_lib import eureka_lifecycle, MetricsStore
+
+# Logger für den Webserver
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup-Logik (falls nötig)
-    print("🚀 Server startet...")
+    # Startup-Logik
+    logger.info("Server startet...")
 
     yield  # hier läuft die App
 
     # Shutdown-Logik
-    print("🔻 Server wird heruntergefahren. Stoppe alle Clients...")
+    logger.info("Server wird heruntergefahren. Stoppe alle Clients...")
     for name, event in stop_events.items():
-        print(f"Stoppe Client {name}")
+        logger.info(f"Stoppe Client {name}")
         event.set()
     for name, thread in client_threads.items():
         if thread.is_alive():
-            print(f"⏳ Warte auf Thread von {name}")
+            logger.info(f"Warte auf Thread von {name}")
             thread.join(timeout=5)
-    print("✅ Alle Clients gestoppt.")
+    logger.info("Alle Clients gestoppt.")
 
 app = FastAPI(lifespan=lifespan)
 metrics_store = MetricsStore()
@@ -40,17 +43,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 LOG_DIR = "logs"
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
-    print(f"Logverzeichnis '{LOG_DIR}' wurde erstellt.")
+    logger.info(f"Logverzeichnis '{LOG_DIR}' wurde erstellt.")
 else:
-    print(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
+    logger.info(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
 # In-memory registry
-clients = {}
-client_threads = {}
-stop_events = {}
+clients: Dict[str, Dict[str, Any]] = {}
+client_threads: Dict[str, threading.Thread] = {}
+stop_events: Dict[str, threading.Event] = {}
 
 EUREKA_SERVERS_FILE = "eureka_server.json"
-EUREKA_SERVER_URLS = []
+EUREKA_SERVER_URLS: List[str] = []
 
 # Lade Liste von Eureka-Servern
 if os.path.exists(EUREKA_SERVERS_FILE):
@@ -58,11 +61,11 @@ if os.path.exists(EUREKA_SERVERS_FILE):
         with open(EUREKA_SERVERS_FILE, "r") as f:
             config = json.load(f)
             EUREKA_SERVER_URLS = config.get("servers", [])
-            print(f"{len(EUREKA_SERVER_URLS)} Eureka-Server geladen.")
+            logger.info(f"{len(EUREKA_SERVER_URLS)} Eureka-Server geladen.")
     except Exception as e:
-        print(f"Fehler beim Laden von {EUREKA_SERVERS_FILE}: {e}")
+        logger.error(f"Fehler beim Laden von {EUREKA_SERVERS_FILE}: {e}")
 else:
-    print(f"Warnung: {EUREKA_SERVERS_FILE} nicht gefunden. Bitte erstellen mit 'servers' Liste.")
+    logger.warning(f"{EUREKA_SERVERS_FILE} nicht gefunden. Bitte erstellen mit 'servers' Liste.")
 
 
 CONFIG_FILE = "services.json"
@@ -82,16 +85,16 @@ if os.path.exists(CONFIG_FILE):
                     }
                 clients[name] = client
                 metrics_store.set_service_registered_status(name, 0)
-        print(f"{len(clients)} Clients aus {CONFIG_FILE} geladen.")
+        logger.info(f"{len(clients)} Clients aus {CONFIG_FILE} geladen.")
     except Exception as e:
-        print(f"Fehler beim Laden von {CONFIG_FILE}: {e}")
+        logger.error(f"Fehler beim Laden von {CONFIG_FILE}: {e}")
 
-def save_clients_to_file():
+def save_clients_to_file() -> None:
     try:
         with open(CONFIG_FILE, "w") as f:
             json.dump(list(clients.values()), f, indent=2)
     except Exception as e:
-        print(f"Fehler beim Speichern von Clients: {e}")
+        logger.error(f"Fehler beim Speichern von Clients: {e}")
 
 @app.get("/")
 def serve_index():
@@ -143,39 +146,29 @@ def start_client(name: str):
     def run():
         service_data = clients[name]
         log_path = f"logs/{name}.log"
-        success = False
-        attempts = 0
-        tried = set()
 
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.INFO)
-        handler = logging.FileHandler(log_path)
-        formatter = logging.Formatter('%(asctime)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.handlers = [handler] 
+        service_logger = logging.getLogger(name)
+        service_logger.setLevel(logging.INFO)
+        service_logger.propagate = False
 
-        while not success and len(tried) < len(EUREKA_SERVER_URLS):
-            server = random.choice(EUREKA_SERVER_URLS)
-            if server in tried:
-                continue
-            tried.add(server)
-            service_data["eurekaServerUrl"] = server
-            try:
-                logger.info(f"Versuche Verbindung zu {server}")
-                eureka_lifecycle(service_data, metrics_store, stop_event, logger)
-                success = True
-            except Exception as e:
-                print(f"Verbindung zu {server} fehlgeschlagen für {name}: {e}")
-                logger.error(f"Fehlgeschlagen bei {server}: {e}")
-                continue
+        # Nur Handler hinzufügen, wenn noch keiner vorhanden ist
+        if not service_logger.handlers:
+            handler = logging.FileHandler(log_path)
+            formatter = logging.Formatter('%(asctime)s - %(message)s')
+            handler.setFormatter(formatter)
+            service_logger.addHandler(handler)
 
-        if not success:
-            print(f"Alle Eureka-Server fehlgeschlagen für {name}.")
+        try:
+            service_logger.info("Starte Eureka-Client...")
+            eureka_lifecycle(service_data, metrics_store, stop_event, service_logger)
+        except Exception as e:
+            service_logger.exception(f"Fehler im eureka_lifecycle: {e}")
+            logger.error(f"Client {name} fehlgeschlagen: {e}")
 
-    thread = threading.Thread(target=run, daemon=True)
+    thread = threading.Thread(target=run, daemon=False, name=f"eureka-{name}")
     client_threads[name] = thread
     thread.start()
-    return {"message": f"Client {name} gestartet (versucht mehrere Eureka-Server)."}
+    return {"message": f"Client {name} gestartet."}
 
 @app.post("/clients/{name}/stop")
 def stop_client(name: str):
@@ -184,18 +177,17 @@ def stop_client(name: str):
         raise HTTPException(status_code=400, detail="Client not running")
 
     # Signal thread to stop
+    logger.info(f"Stoppe Client {name}...")
     stop_events[name].set()
 
-    # Wait briefly for thread to exit
+    # Wait briefly for thread to exit (deregistration happens in eureka_lifecycle)
     thread = client_threads[name]
-    thread.join(timeout=5)
+    thread.join(timeout=10)
 
-    # Deregister from Eureka
-    try:
-        deregister_instance(clients[name], metrics_store)
-        print(f"{name} deregistered from Eureka.")
-    except Exception as e:
-        print(f"Fehler beim Deregistrieren von {name}: {e}")
+    if thread.is_alive():
+        logger.warning(f"Client {name} konnte nicht innerhalb von 10 Sekunden gestoppt werden.")
+    else:
+        logger.info(f"Client {name} erfolgreich gestoppt und deregistriert.")
 
     return {"message": f"Client {name} stopped and deregistered."}
 
