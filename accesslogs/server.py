@@ -4,7 +4,6 @@ from datetime import datetime
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
-import re
 
 LOG_DIR = './logs'
 LOG_FILENAME_PREFIX = 'access_log'
@@ -38,7 +37,6 @@ class EurekaHandler(http.server.SimpleHTTPRequestHandler):
         # Request Line (Methode, Pfad, Protokoll)
         request_line = f"{self.command} {self.path} {self.request_version}"
 
-        status_code = self.send_response_only 
         response_status = args[1] if len(args) > 1 else '?' 
 
         source_ip = self.client_address[0]
