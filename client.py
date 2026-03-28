@@ -47,7 +47,7 @@ def graceful_shutdown(signum, frame):
     for thread in eureka_lifecycle_threads:
         thread.join(timeout=10)
         if thread.is_alive():
-            print(f"Warnung: Thread konnte nicht innerhalb von 10 Sekunden beendet werden.")
+            print("Warnung: Thread konnte nicht innerhalb von 10 Sekunden beendet werden.")
 
     print("Alle Services wurden heruntergefahren. Beende Anwendung.")
     sys.exit(0)
