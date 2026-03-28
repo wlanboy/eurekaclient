@@ -12,6 +12,9 @@ If you are looking for a spring boot application doing this stuff use: https://g
 
 ```bash
 uv sync
+uv run pytest
+uv run pyright
+uv run ruff check
 uv run client.py
 ```
 
@@ -20,7 +23,6 @@ uv run client.py
 - cd mirrorapi
 - uv sync
 - uv pip compile pyproject.toml -o requirements.txt
-- uv pip install -r requirements.txt
 - uv run client.py
 
 ## simple client
@@ -88,7 +90,9 @@ docker run --rm \
 ```
 
 ## run web ui
+
 ```bash
 .venv/bin/uvicorn webserver:app --reload
 ```
+
 ![Web UI](screenshots/serviceclients.png)
