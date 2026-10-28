@@ -1,16 +1,19 @@
 # client.py
 import json
-import threading
-import time
-import sys
-import signal
 import logging
 import os
-from typing import List, Dict, Any
+import signal
+import sys
+import threading
+import time
+from typing import Any
 
 # Importiere die Eureka-Client-Logik und die MetricsStore-Klasse
-from eureka_client_lib import eureka_lifecycle, MetricsStore
-from eureka_client_lib import EUREKA_SERVER_URL # Um die URL im Start-Log auszugeben
+from eureka_client_lib import (
+    EUREKA_SERVER_URL,  # Um die URL im Start-Log auszugeben
+    MetricsStore,
+    eureka_lifecycle,
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -27,9 +30,9 @@ else:
     print(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
 # --- Globale Listen für Threads und Services (für sauberes Herunterfahren) ---
-eureka_lifecycle_threads: List[threading.Thread] = []
-services_to_manage: List[Dict[str, Any]] = [] # Muss global sein, damit der Signal-Handler darauf zugreifen kann
-stop_events: Dict[str, threading.Event] = {} # Speichert Threading.Event-Objekte für jeden Service-Thread
+eureka_lifecycle_threads: list[threading.Thread] = []
+services_to_manage: list[dict[str, Any]] = [] # Muss global sein, damit der Signal-Handler darauf zugreifen kann
+stop_events: dict[str, threading.Event] = {} # Speichert Threading.Event-Objekte für jeden Service-Thread
 
 def graceful_shutdown(signum, frame):
     """
@@ -111,8 +114,8 @@ def main():
         def run_lifecycle(svc_data, metrics, stop_evt, log, svc_name):
             try:
                 eureka_lifecycle(svc_data, metrics, stop_evt, log)
-            except Exception as e:
-                log.exception(f"Error in eureka_lifecycle thread for {svc_name}: {e}")
+            except Exception:
+                log.exception(f"Error in eureka_lifecycle thread for {svc_name}")
 
         # Starte den Lebenszyklus-Thread für jeden Service
         thread = threading.Thread(

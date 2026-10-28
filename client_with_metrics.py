@@ -1,22 +1,26 @@
 # client_wm.py
 import json
+import logging
+import os
+import signal
+import sys
 import threading
 import time
-import sys
-import signal
-import os
-import logging
 
 # Importiere die Eureka-Client-Logik und die MetricsStore-Klasse
-from eureka_client_lib import eureka_lifecycle, deregister_instance, MetricsStore
-from eureka_client_lib import EUREKA_SERVER_URL # Um die URL im Start-Log auszugeben
+from eureka_client_lib import (
+    EUREKA_SERVER_URL,  # Um die URL im Start-Log auszugeben
+    MetricsStore,
+    deregister_instance,
+    eureka_lifecycle,
+)
 
 # Importiere die Funktion zum Starten des Metrik-Webservers
-from metrics_exporter import run_metrics_web_server # <-- Wichtige Änderung hier
+from metrics_exporter import run_metrics_web_server  # <-- Wichtige Änderung hier
 
 # --- Konfiguration für den Metrik-Webserver ---
 METRICS_SERVER_HOST = os.getenv("METRICS_SERVER_HOST", "0.0.0.0")
-METRICS_SERVER_PORT = int(os.getenv("METRICS_SERVER_PORT", 9090))
+METRICS_SERVER_PORT = int(os.getenv("METRICS_SERVER_PORT", "9090"))
 
 # --- Globale Metrik-Speicher-Instanz ---
 metrics_store = MetricsStore()

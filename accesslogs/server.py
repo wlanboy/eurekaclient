@@ -1,9 +1,9 @@
 import http.server
+import logging
+import os
 import socketserver
 from datetime import datetime
-import logging
 from logging.handlers import TimedRotatingFileHandler
-import os
 
 LOG_DIR = './logs'
 LOG_FILENAME_PREFIX = 'access_log'

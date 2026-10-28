@@ -2,6 +2,7 @@ import os
 import re
 from collections import defaultdict
 
+
 def analyze_log_file(log_file_path):
     """
     Analysiert ein Logfile und extrahiert eindeutige Source-IPs pro Class B Subnetzwerk.
@@ -26,7 +27,7 @@ def analyze_log_file(log_file_path):
     except FileNotFoundError:
         print(f"Fehler: Logfile '{log_file_path}' nicht gefunden.")
         return None
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         print(f"Ein Fehler ist beim Lesen des Logfiles aufgetreten: {e}")
         return None
 
@@ -57,7 +58,7 @@ def display_results(networks_data):
     sorted_networks = sorted(networks_data.keys())
 
     for prefix in sorted_networks:
-        ips = sorted(list(networks_data[prefix])) 
+        ips = sorted(networks_data[prefix])
         print(f"\nSubnetzwerk: {prefix}.0.0/16")
         print("--------------------------")
         for ip in ips:

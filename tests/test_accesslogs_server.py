@@ -1,7 +1,7 @@
-import sys
 import os
-import threading
 import socketserver
+import sys
+import threading
 import urllib.request
 
 import pytest

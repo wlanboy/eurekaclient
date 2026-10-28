@@ -1,8 +1,9 @@
 # metrics_exporter.py
+import contextlib
 import json
 import logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Dict, Any, Type
+from typing import Any
 
 # Importiere die MetricsStore-Klasse aus der Eureka-Client-Bibliothek
 from eureka_client_lib import MetricsStore
@@ -10,7 +11,7 @@ from eureka_client_lib import MetricsStore
 # Logger für den Metrics Exporter
 logger = logging.getLogger(__name__)
 
-def create_metrics_handler(metrics_store_instance: MetricsStore, app_config: Dict[str, Any]) -> Type[BaseHTTPRequestHandler]:
+def create_metrics_handler(metrics_store_instance: MetricsStore, app_config: dict[str, Any]) -> type[BaseHTTPRequestHandler]:
     """
     Eine Fabrikfunktion, die eine CustomMetricsHandler-Klasse erstellt.
     Diese Klasse hat Zugriff auf die übergebene MetricsStore-Instanz
@@ -24,7 +25,6 @@ def create_metrics_handler(metrics_store_instance: MetricsStore, app_config: Dic
     class CustomMetricsHandler(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args: Any) -> None:
             """Überschreibe log_message um HTTP-Anfragen zu unterdrücken"""
-            pass
 
         def do_GET(self) -> None:
             try:
@@ -44,14 +44,12 @@ def create_metrics_handler(metrics_store_instance: MetricsStore, app_config: Dic
                     self.send_response(404)
                     self.end_headers()
                     self.wfile.write(b'Not Found')
-            except Exception as e:
-                logger.exception(f"Fehler beim Verarbeiten der Anfrage {self.path}: {e}")
-                try:
+            except Exception:
+                logger.exception(f"Fehler beim Verarbeiten der Anfrage {self.path}")
+                with contextlib.suppress(OSError):
                     self.send_response(500)
                     self.end_headers()
                     self.wfile.write(b'Internal Server Error')
-                except Exception:
-                    pass
 
         def generate_prometheus_metrics(self) -> str:
             """
@@ -76,13 +74,13 @@ def create_metrics_handler(metrics_store_instance: MetricsStore, app_config: Dic
                     output.append(f"python_eureka_service_registered{{service_name=\"{service_name}\"}} {status}")
 
                 return "\n".join(output) + "\n"
-            except Exception as e:
-                logger.exception(f"Fehler beim Generieren der Prometheus-Metriken: {e}")
+            except Exception:
+                logger.exception("Fehler beim Generieren der Prometheus-Metriken")
                 return "# Error generating metrics\n"
 
     return CustomMetricsHandler
 
-def run_metrics_web_server(metrics_store_instance: MetricsStore, app_config: Dict[str, Any], host: str, port: int) -> None:
+def run_metrics_web_server(metrics_store_instance: MetricsStore, app_config: dict[str, Any], host: str, port: int) -> None:
     """
     Startet einen einfachen HTTP-Webserver in einem Thread, der Metriken und Info exponiert.
     """
@@ -101,6 +99,6 @@ def run_metrics_web_server(metrics_store_instance: MetricsStore, app_config: Dic
         finally:
             httpd.server_close()
             logger.info("Metrics web server stopped.")
-    except Exception as e:
-        logger.exception(f"Fehler beim Starten des Metrics Web Servers: {e}")
+    except Exception:
+        logger.exception("Fehler beim Starten des Metrics Web Servers")
         raise

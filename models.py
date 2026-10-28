@@ -1,6 +1,7 @@
 # models.py
 from pydantic import BaseModel
 
+
 class ClientConfig(BaseModel):
     serviceName: str
     healthEndpointPath: str

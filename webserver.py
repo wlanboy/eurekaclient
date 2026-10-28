@@ -1,16 +1,17 @@
+import json
+import logging
+import os
+import threading
+import time
+from contextlib import asynccontextmanager
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-from models import ClientConfig
-import threading
-import os
-import json
-import logging
-import time
-from typing import Dict, List, Any
 
-from eureka_client_lib import eureka_lifecycle, MetricsStore
+from eureka_client_lib import MetricsStore, eureka_lifecycle
+from models import ClientConfig
 
 # Logger für den Webserver
 logger = logging.getLogger(__name__)
@@ -48,12 +49,12 @@ else:
     logger.info(f"Logverzeichnis '{LOG_DIR}' ist vorhanden.")
 
 # In-memory registry
-clients: Dict[str, Dict[str, Any]] = {}
-client_threads: Dict[str, threading.Thread] = {}
-stop_events: Dict[str, threading.Event] = {}
+clients: dict[str, dict[str, Any]] = {}
+client_threads: dict[str, threading.Thread] = {}
+stop_events: dict[str, threading.Event] = {}
 
 EUREKA_SERVERS_FILE = "eureka_server.json"
-EUREKA_SERVER_URLS: List[str] = []
+EUREKA_SERVER_URLS: list[str] = []
 
 # Lade Liste von Eureka-Servern
 if os.path.exists(EUREKA_SERVERS_FILE):
@@ -62,7 +63,7 @@ if os.path.exists(EUREKA_SERVERS_FILE):
             config = json.load(f)
             EUREKA_SERVER_URLS = config.get("servers", [])
             logger.info(f"{len(EUREKA_SERVER_URLS)} Eureka-Server geladen.")
-    except Exception as e:
+    except (OSError, ValueError, AttributeError) as e:
         logger.error(f"Fehler beim Laden von {EUREKA_SERVERS_FILE}: {e}")
 else:
     logger.warning(f"{EUREKA_SERVERS_FILE} nicht gefunden. Bitte erstellen mit 'servers' Liste.")
@@ -86,14 +87,14 @@ if os.path.exists(CONFIG_FILE):
                 clients[name] = client
                 metrics_store.set_service_registered_status(name, 0)
         logger.info(f"{len(clients)} Clients aus {CONFIG_FILE} geladen.")
-    except Exception as e:
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
         logger.error(f"Fehler beim Laden von {CONFIG_FILE}: {e}")
 
 def save_clients_to_file() -> None:
     try:
         with open(CONFIG_FILE, "w") as f:
             json.dump(list(clients.values()), f, indent=2)
-    except Exception as e:
+    except (OSError, TypeError, ValueError) as e:
         logger.error(f"Fehler beim Speichern von Clients: {e}")
 
 @app.get("/")
@@ -162,7 +163,7 @@ def start_client(name: str):
             service_logger.info("Starte Eureka-Client...")
             eureka_lifecycle(service_data, metrics_store, stop_event, service_logger)
         except Exception as e:
-            service_logger.exception(f"Fehler im eureka_lifecycle: {e}")
+            service_logger.exception("Fehler im eureka_lifecycle")
             logger.error(f"Client {name} fehlgeschlagen: {e}")
 
     thread = threading.Thread(target=run, daemon=False, name=f"eureka-{name}")

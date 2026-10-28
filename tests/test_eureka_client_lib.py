@@ -1,14 +1,14 @@
 import threading
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import requests
 
 from eureka_client_lib import (
     MetricsStore,
+    deregister_instance,
     get_ip_address,
     register_instance,
     send_heartbeat,
-    deregister_instance,
 )
 
 SERVICE_DATA = {
